@@ -47,18 +47,18 @@ With example questions:
 tryout
 
 # Git commands
-*Make branch in repository online
-*Go to terminal
+- Make branch in repository online
+- Go to terminal
 
-*git pull
-*git branch -a 			# list of branches
-*git checkout Elise
+- git pull
+- git branch -a 			# list of branches
+- git checkout Elise
 
-*Add changes to your branch
-*git add
-*git commit -m “blabla”
-*git push
+- Add changes to your branch
+- git add
+- git commit -m “blabla”
+- git push
 
-*To merge your branch with base
-*git checkout base
-*git merge Elise
+- To merge your branch with base
+- git checkout base
+- git merge Elise
