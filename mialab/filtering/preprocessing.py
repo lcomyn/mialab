@@ -31,7 +31,7 @@ class ImageNormalization(pymia_fltr.Filter):
 
         # # todo: normalize the image using numpy
         # warnings.warn('No normalization implemented. Returning unprocessed image.')
-        img_arr = (img_arr - np.min(img_arr)) / (np.max(img_arr) - np.min(img_arr))  # Normalization to [0, 1]
+        img_arr = (img_arr - np.mean(img_arr))/np.std(img_arr) 
         img_out = sitk.GetImageFromArray(img_arr)
         img_out.CopyInformation(image)
 
