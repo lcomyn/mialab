@@ -29,8 +29,8 @@ class ImageNormalization(pymia_fltr.Filter):
 
         img_arr = sitk.GetArrayFromImage(image)
 
-        # todo: normalize the image using numpy
-        warnings.warn('No normalization implemented. Returning unprocessed image.')
+        # # todo: normalize the image using numpy
+        # warnings.warn('No normalization implemented. Returning unprocessed image.')
         img_arr = (img_arr - np.min(img_arr)) / (np.max(img_arr) - np.min(img_arr))  # Normalization to [0, 1]
         img_out = sitk.GetImageFromArray(img_arr)
         img_out.CopyInformation(image)
@@ -78,9 +78,9 @@ class SkullStripping(pymia_fltr.Filter):
         """
         mask = params.img_mask  # the brain mask
 
-        # todo: remove the skull from the image by using the brain mask
-        warnings.warn('No skull-stripping implemented. Returning unprocessed image.')
-
+        # # todo: remove the skull from the image by using the brain mask
+        # warnings.warn('No skull-stripping implemented. Returning unprocessed image.')
+        image = image*mask
         return image
 
     def __str__(self):
@@ -134,11 +134,17 @@ class ImageRegistration(pymia_fltr.Filter):
         atlas = params.atlas
         transform = params.transformation
         is_ground_truth = params.is_ground_truth  # the ground truth will be handled slightly different
-
+         
         # note: if you are interested in registration, and want to test it, have a look at
         # pymia.filtering.registration.MultiModalRegistration. Think about the type of registration, i.e.
         # do you want to register to an atlas or inter-subject? Or just ask us, we can guide you ;-)
-
+        
+        if is_ground_truth:
+            interpolator = sitk.sitkNearestNeighbor
+        else:
+            interpolator = sitk.sitkLinear
+        image = sitk.Resample(image, atlas, transform, interpolator)
+        
         return image
 
     def __str__(self):
