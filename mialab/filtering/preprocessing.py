@@ -76,9 +76,9 @@ class SkullStripping(pymia_fltr.Filter):
         Returns:
             sitk.Image: The normalized image.
         """
-        img_mask = sitk.Cast(img_mask, sitk.sitkUInt16)
+        
         mask = params.img_mask  # the brain mask
-
+        mask = sitk.Cast(mask, sitk.sitkUInt16)
         # # todo: remove the skull from the image by using the brain mask
         # warnings.warn('No skull-stripping implemented. Returning unprocessed image.')
         image = image*mask
@@ -130,7 +130,7 @@ class ImageRegistration(pymia_fltr.Filter):
 
         # todo: replace this filter by a registration. Registration can be costly, therefore, we provide you the
         # transformation, which you only need to apply to the image!
-        warnings.warn('No registration implemented. Returning unregistered image')
+        # warnings.warn('No registration implemented. Returning unregistered image')
 
         atlas = params.atlas
         transform = params.transformation
