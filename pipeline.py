@@ -15,6 +15,7 @@ import numpy as np
 import pymia.data.conversion as conversion
 import pymia.evaluation.writer as writer
 
+
 try:
     import mialab.data.structure as structure
     import mialab.utilities.file_access_utilities as futil
@@ -72,10 +73,13 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     data_train = np.concatenate([img.feature_matrix[0] for img in images])
     labels_train = np.concatenate([img.feature_matrix[1] for img in images]).squeeze()
 
+    # initialize evaluator
+    evaluator = putil.init_evaluator()
+
     warnings.warn('Random forest parameters not properly set.')
     forest = sk_ensemble.RandomForestClassifier(max_features=images[0].feature_matrix[0].shape[1],
-                                                n_estimators=30,
-                                                max_depth=40)
+                                                n_estimators=3,
+                                                max_depth=4)
 
     start_time = timeit.default_timer()
     forest.fit(data_train, labels_train)
@@ -87,9 +91,6 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     os.makedirs(result_dir, exist_ok=True)
 
     print('-' * 5, 'Testing...')
-
-    # initialize evaluator
-    evaluator = putil.init_evaluator()
 
     # crawl the training image directories
     crawler = futil.FileSystemDataCrawler(data_test_dir,
@@ -107,11 +108,15 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     for img in images_test:
         print('-' * 10, 'Testing', img.id_)
 
+        
         start_time = timeit.default_timer()
         predictions = forest.predict(img.feature_matrix[0])
+        print(np.shape(predictions))
         probabilities = forest.predict_proba(img.feature_matrix[0])
+        labels = img.feature_matrix[1].squeeze()
+        print(np.shape(labels))
         print(' Time elapsed:', timeit.default_timer() - start_time, 's')
-
+        
         # convert prediction and probabilities back to SimpleITK images
         image_prediction = conversion.NumpySimpleITKImageBridge.convert(predictions.astype(np.uint8),
                                                                         img.image_properties)
@@ -119,7 +124,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
 
         # evaluate segmentation without post-processing
         evaluator.evaluate(image_prediction, img.images[structure.BrainImageTypes.GroundTruth], img.id_)
-
+        own_dices = putil.multiclass_dice_coefficient(predictions, labels)
         images_prediction.append(image_prediction)
         images_probabilities.append(image_probabilities)
 
@@ -135,8 +140,10 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
         # save results
         sitk.WriteImage(images_prediction[i], os.path.join(result_dir, images_test[i].id_ + '_SEG.mha'), True)
         sitk.WriteImage(images_post_processed[i], os.path.join(result_dir, images_test[i].id_ + '_SEG-PP.mha'), True)
-        sitk.WriteImage(img.images[structure.BrainImageTypes.T1w], os.path.join(result_dir, images_test[i].id_ + '_t1w.mha'))
-        sitk.WriteImage(img.images[structure.BrainImageTypes.T2w], os.path.join(result_dir, images_test[i].id_ + '_t2w.mha'))
+        sitk.WriteImage(img.images[structure.BrainImageTypes.T1w], os.path.join(result_dir, images_test[i].id_ + '_T1W.mha'))
+        sitk.WriteImage(img.images[structure.BrainImageTypes.T2w], os.path.join(result_dir, images_test[i].id_ + '_T2W.mha'))
+        sitk.WriteImage(img.images[structure.BrainImageTypes.GroundTruth], os.path.join(result_dir, images_test[i].id_ + '_GT.mha'))
+        
     # use two writers to report the results
     os.makedirs(result_dir, exist_ok=True)  # generate result directory, if it does not exists
     result_file = os.path.join(result_dir, 'results.csv')
