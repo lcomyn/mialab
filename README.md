@@ -62,4 +62,3 @@ tryout
 - To merge your branch with base
 - git checkout base
 - git merge Elise
-done
