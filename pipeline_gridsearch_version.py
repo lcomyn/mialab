@@ -71,11 +71,28 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     # generate feature matrix and label vector
     data_train = np.concatenate([img.feature_matrix[0] for img in images])
     labels_train = np.concatenate([img.feature_matrix[1] for img in images]).squeeze()
-
+    
     warnings.warn('Random forest parameters not properly set.')
-    forest = sk_ensemble.RandomForestClassifier(max_features=images[0].feature_matrix[0].shape[1],
-                                                n_estimators=30,
-                                                max_depth=40)
+    #initialise search grid
+    from sklearn.model_selection import GridSearchCV
+    
+    # Define the parameter grid for RandomForestClassifier
+    param_grid = {'n_estimators': [10, 30, 50],
+                  'max_depth': [20, 40, 60]}
+
+    # Initialize the RandomForestClassifier
+    forest = sk_ensemble.RandomForestClassifier()
+
+    # Initialize grid search with the custom Dice score evaluator function
+    grid_search = GridSearchCV(forest, param_grid, scoring=evaluator_score, cv=3, verbose=2)
+
+    # Fit the model using grid search
+    grid_search.fit(data_train, labels_train)  # Assuming data_train and labels_train are defined
+
+    # Retrieve the best estimator (the model with the best hyperparameters based on Dice score)
+    best_forest = grid_search.best_estimator_
+
+
 
     start_time = timeit.default_timer()
     forest.fit(data_train, labels_train)
