@@ -81,7 +81,7 @@ class SkullStripping(pymia_fltr.Filter):
         mask = sitk.Cast(mask, sitk.sitkUInt16)
         # # todo: remove the skull from the image by using the brain mask
         # warnings.warn('No skull-stripping implemented. Returning unprocessed image.')
-        image = image*mask
+        # image = image*mask
         return image
 
     def __str__(self):
@@ -141,7 +141,7 @@ class ImageRegistration(pymia_fltr.Filter):
         # do you want to register to an atlas or inter-subject? Or just ask us, we can guide you ;-)
         
         if is_ground_truth:
-            interpolator = sitk.sitkNearestNeighbor
+            interpolator = sitk.sitkNearestNeighbor #because discrete values are required if it is a mask/groundtruth that has to be registered
         else:
             interpolator = sitk.sitkLinear
         image = sitk.Resample(image, atlas, transform, interpolator)
