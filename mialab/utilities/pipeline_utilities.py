@@ -193,7 +193,7 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
     # construct pipeline for brain mask registration
     # we need to perform this before the T1w and T2w pipeline because the registered mask is used for skull-stripping
     pipeline_brain_mask = fltr.FilterPipeline()
-    if kwargs.get('registration_pre', False):
+    if kwargs.get('registration_pre', True):
         pipeline_brain_mask.add_filter(fltr_prep.ImageRegistration())
         pipeline_brain_mask.set_param(fltr_prep.ImageRegistrationParameters(atlas_t1, img.transformation, True),
                                       len(pipeline_brain_mask.filters) - 1)
@@ -204,15 +204,15 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
 
     # construct pipeline for T1w image pre-processing
     pipeline_t1 = fltr.FilterPipeline()
-    if kwargs.get('registration_pre', False):
+    if kwargs.get('registration_pre', True):
         pipeline_t1.add_filter(fltr_prep.ImageRegistration())
         pipeline_t1.set_param(fltr_prep.ImageRegistrationParameters(atlas_t1, img.transformation),
                               len(pipeline_t1.filters) - 1)
-    if kwargs.get('skullstrip_pre', False):
+    if kwargs.get('skullstrip_pre', True):
         pipeline_t1.add_filter(fltr_prep.SkullStripping())
         pipeline_t1.set_param(fltr_prep.SkullStrippingParameters(img.images[structure.BrainImageTypes.BrainMask]),
                               len(pipeline_t1.filters) - 1)
-    if kwargs.get('normalization_pre', False):
+    if kwargs.get('normalization_pre', True):
         pipeline_t1.add_filter(fltr_prep.ImageNormalization())
 
     # execute pipeline on the T1w image
@@ -220,15 +220,15 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
 
     # construct pipeline for T2w image pre-processing
     pipeline_t2 = fltr.FilterPipeline()
-    if kwargs.get('registration_pre', False):
+    if kwargs.get('registration_pre', True):
         pipeline_t2.add_filter(fltr_prep.ImageRegistration())
         pipeline_t2.set_param(fltr_prep.ImageRegistrationParameters(atlas_t2, img.transformation),
                               len(pipeline_t2.filters) - 1)
-    if kwargs.get('skullstrip_pre', False):
+    if kwargs.get('skullstrip_pre', True):
         pipeline_t2.add_filter(fltr_prep.SkullStripping())
         pipeline_t2.set_param(fltr_prep.SkullStrippingParameters(img.images[structure.BrainImageTypes.BrainMask]),
                               len(pipeline_t2.filters) - 1)
-    if kwargs.get('normalization_pre', False):
+    if kwargs.get('normalization_pre', True):
         pipeline_t2.add_filter(fltr_prep.ImageNormalization())
 
     # execute pipeline on the T2w image
@@ -236,7 +236,7 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
 
     # construct pipeline for ground truth image pre-processing
     pipeline_gt = fltr.FilterPipeline()
-    if kwargs.get('registration_pre', False):
+    if kwargs.get('registration_pre', True):
         pipeline_gt.add_filter(fltr_prep.ImageRegistration())
         pipeline_gt.set_param(fltr_prep.ImageRegistrationParameters(atlas_t1, img.transformation, True),
                               len(pipeline_gt.filters) - 1)

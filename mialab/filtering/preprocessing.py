@@ -81,7 +81,7 @@ class SkullStripping(pymia_fltr.Filter):
         mask = sitk.Cast(mask, sitk.sitkUInt16)
         # # todo: remove the skull from the image by using the brain mask
         # warnings.warn('No skull-stripping implemented. Returning unprocessed image.')
-        # image = image*mask
+        image = image*mask
         return image
 
     def __str__(self):
@@ -132,8 +132,7 @@ class ImageRegistration(pymia_fltr.Filter):
         # transformation, which you only need to apply to the image!
         # warnings.warn('No registration implemented. Returning unregistered image')
 
-        atlas = params.atlas
-        transform = params.transformation
+        
         is_ground_truth = params.is_ground_truth  # the ground truth will be handled slightly different
          
         # note: if you are interested in registration, and want to test it, have a look at
@@ -144,7 +143,7 @@ class ImageRegistration(pymia_fltr.Filter):
             interpolator = sitk.sitkNearestNeighbor #because discrete values are required if it is a mask/groundtruth that has to be registered
         else:
             interpolator = sitk.sitkLinear
-        image = sitk.Resample(image, atlas, transform, interpolator)
+        image = sitk.Resample(image, referenceImage = params.atlas, transform = params.transformation, interpolator = interpolator)
         
         return image
 
