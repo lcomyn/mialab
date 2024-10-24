@@ -84,15 +84,20 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     forest = sk_ensemble.RandomForestClassifier()
 
     # Initialize grid search with the custom Dice score evaluator function
-    grid_search = GridSearchCV(forest, param_grid, scoring=evaluator_score, cv=3, verbose=2)
+    grid_search = GridSearchCV(forest, param_grid, scoring=lambda est, X, y: putil.custom_evaluator_train(est, X, y), cv=3, verbose=2)
 
     # Fit the model using grid search
     grid_search.fit(data_train, labels_train)  # Assuming data_train and labels_train are defined
 
     # Retrieve the best estimator (the model with the best hyperparameters based on Dice score)
     best_forest = grid_search.best_estimator_
+    forest = best_forest
 
-
+    # crawl the training image directories
+    crawler = futil.FileSystemDataCrawler(data_test_dir,
+                                          LOADING_KEYS,
+                                          futil.BrainImageFilePathGenerator(),
+                                          futil.DataDirectoryFilter())
 
     start_time = timeit.default_timer()
     forest.fit(data_train, labels_train)
@@ -107,12 +112,6 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
 
     # initialize evaluator
     evaluator = putil.init_evaluator()
-
-    # crawl the training image directories
-    crawler = futil.FileSystemDataCrawler(data_test_dir,
-                                          LOADING_KEYS,
-                                          futil.BrainImageFilePathGenerator(),
-                                          futil.DataDirectoryFilter())
 
     # load images for testing and pre-process
     pre_process_params['training'] = False

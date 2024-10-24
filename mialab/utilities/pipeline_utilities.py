@@ -364,3 +364,39 @@ def post_process_batch(brain_images: t.List[structure.BrainImage], segmentations
     else:
         pp_images = [post_process(img, seg, prob, **post_process_params) for img, seg, prob in param_list]
     return pp_images
+
+
+# def custom_evaluator_train(crawler, pre_process_params, forest):
+def custom_evaluator_train(estimator, X, y):
+    evaluator = init_evaluator()
+    scores = []
+    print(f'X shape: {X.shape}')
+    print(f'y shape: {y.shape}')
+
+    # for img in images:
+    #     predictions = estimator.predict(img.feature_matrix[0])
+    #     print(f'Feature matrix shape: {img.feature_matrix[0].shape}')
+    #     print(f'image properties: {img.image_properties}')
+
+    # for i,x in enumerate(X):
+    #     predictions = estimator.predict(x)
+    #     print(f'Feature matrix shape: {x.shape}')
+    #     print(f'image properties: {images[i].image_properties}')
+
+    #     # convert prediction and probabilities back to SimpleITK images
+    #     image_prediction = conversion.NumpySimpleITKImageBridge.convert(predictions.astype(np.uint8),
+    #                                                                     images[i].image_properties)
+
+    #     # evaluate segmentation
+    #     evaluator.evaluate(image_prediction, images[i].images[structure.BrainImageTypes.GroundTruth], images[i].id_)
+
+    #     scores += [evaluator.results[0].value]
+    y_pred = np.argmax(X, axis=1)
+    evaluator.evaluate(y, y_pred, '')
+    print('OMFG i did it')
+    return evaluator.results[-1].value
+
+
+    
+    #return np.mean(scores)
+        
