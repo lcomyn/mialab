@@ -307,6 +307,7 @@ def init_evaluator() -> eval_.Evaluator:
               }
 
     evaluator = eval_.SegmentationEvaluator(metrics, labels)
+
     return evaluator
 
 
