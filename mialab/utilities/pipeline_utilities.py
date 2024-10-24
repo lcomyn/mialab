@@ -182,14 +182,14 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
     """
 
     print('-' * 10, 'Processing', id_)
-
+    
     # load image
     path = paths.pop(id_, '')  # the value with key id_ is the root directory of the image
     path_to_transform = paths.pop(structure.BrainImageTypes.RegistrationTransform, '')
     img = {img_key: sitk.ReadImage(path) for img_key, path in paths.items()}
     transform = sitk.ReadTransform(path_to_transform)
     img = structure.BrainImage(id_, path, img, transform)
-
+    
     # construct pipeline for brain mask registration
     # we need to perform this before the T1w and T2w pipeline because the registered mask is used for skull-stripping
     pipeline_brain_mask = fltr.FilterPipeline()
@@ -197,11 +197,11 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
         pipeline_brain_mask.add_filter(fltr_prep.ImageRegistration())
         pipeline_brain_mask.set_param(fltr_prep.ImageRegistrationParameters(atlas_t1, img.transformation, True),
                                       len(pipeline_brain_mask.filters) - 1)
-
+    
     # execute pipeline on the brain mask image
     img.images[structure.BrainImageTypes.BrainMask] = pipeline_brain_mask.execute(
         img.images[structure.BrainImageTypes.BrainMask])
-
+    
     # construct pipeline for T1w image pre-processing
     pipeline_t1 = fltr.FilterPipeline()
     if kwargs.get('registration_pre', False):
@@ -233,7 +233,7 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
 
     # execute pipeline on the T2w image
     img.images[structure.BrainImageTypes.T2w] = pipeline_t2.execute(img.images[structure.BrainImageTypes.T2w])
-
+    
     # construct pipeline for ground truth image pre-processing
     pipeline_gt = fltr.FilterPipeline()
     if kwargs.get('registration_pre', False):

@@ -132,20 +132,19 @@ class ImageRegistration(pymia_fltr.Filter):
         # transformation, which you only need to apply to the image!
         # warnings.warn('No registration implemented. Returning unregistered image')
 
-        atlas = params.atlas
-        transform = params.transformation
+        
         is_ground_truth = params.is_ground_truth  # the ground truth will be handled slightly different
          
         # note: if you are interested in registration, and want to test it, have a look at
         # pymia.filtering.registration.MultiModalRegistration. Think about the type of registration, i.e.
         # do you want to register to an atlas or inter-subject? Or just ask us, we can guide you ;-)
-        
+        # print(f"UnRegistered Image dimensions: {image.GetSize()}")
         if is_ground_truth:
-            interpolator = sitk.sitkNearestNeighbor
+            interpolator = sitk.sitkNearestNeighbor #because discrete values are required if it is a mask/groundtruth that has to be registered
         else:
             interpolator = sitk.sitkLinear
-        image = sitk.Resample(image, atlas, transform, interpolator)
-        
+        image = sitk.Resample(image, referenceImage = params.atlas, transform = params.transformation, interpolator = interpolator)
+        # print(f"Registered Image dimensions: {image.GetSize()}")
         return image
 
     def __str__(self):
