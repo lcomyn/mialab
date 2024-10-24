@@ -310,7 +310,7 @@ def init_evaluator() -> eval_.Evaluator:
     evaluator = eval_.SegmentationEvaluator(metrics, labels)
     return evaluator
 
-def custom_segmentation_score(estimator, X, y, evaluator):
+def custom_segmentation_score(y, y_pred):
     """
     Custom scoring function for segmentation evaluation with RandomForest.
     
@@ -323,28 +323,22 @@ def custom_segmentation_score(estimator, X, y, evaluator):
     Returns:
         float: The average score across all metrics (e.g., Dice coefficient).
     """
-    total_score = 0
-    n_samples = len(X)
+
+    # Convert predictions back to SimpleITK image for evaluation
+    prediction_image = conversion.NumpySimpleITKImageBridge.convert(y_pred.astype(np.uint8), img.image_properties)
+        
+    # Get the ground truth for evaluation
+    ground_truth = conversion.NumpySimpleITKImageBridge.convert(y, img.image_properties)
+        
+    # Evaluate and collect the score (e.g., Dice coefficient)
+    evaluator.evaluate(prediction_image, ground_truth, img.id_)
+        
+    # Assuming we focus on Dice coefficient
+    dice_score = evaluator.results[i].value
     
-    for i, img in enumerate(X):
-        # Generate predictions
-        predictions = estimator.predict(img.feature_matrix[0])
-        
-        # Convert predictions back to SimpleITK image for evaluation
-        prediction_image = conversion.NumpySimpleITKImageBridge.convert(predictions.astype(np.uint8), img.image_properties)
-        
-        # Get the ground truth for evaluation
-        ground_truth = img.images[structure.BrainImageTypes.GroundTruth]
-        
-        # Evaluate and collect the score (e.g., Dice coefficient)
-        evaluator.evaluate(prediction_image, ground_truth, img.id_)
-        
-        # Assuming we focus on Dice coefficient
-        dice_score = evaluator.results[0].value
-        total_score += dice_score
         
     # Return the average score across all samples
-    return total_score / n_samples
+    return dice_score
 
 
 def pre_process_batch(data_batch: t.Dict[structure.BrainImageTypes, structure.BrainImage],

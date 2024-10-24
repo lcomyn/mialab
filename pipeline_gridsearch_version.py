@@ -15,7 +15,7 @@ import numpy as np
 import pymia.data.conversion as conversion
 import pymia.evaluation.writer as writer
 from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import make_scorer
+from sklearn.metrics import make_scorer, accuracy_score
 
 try:
     import mialab.data.structure as structure
@@ -84,10 +84,10 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     evaluator = putil.init_evaluator()
 
     # Create custom scorer for GridSearchCV
-    scorer = make_scorer(putil.custom_segmentation_score, evaluator=evaluator)
+    scorer = make_scorer(putil.custom_segmentation_score)
 
     # Initialize grid search with the custom Dice score evaluator function
-    grid_search = GridSearchCV(forest, param_grid, scoring=scorer, cv=3, verbose=2)
+    grid_search = GridSearchCV(forest, param_grid, scoring=scorer, verbose=2)
     grid_search.fit(data_train, labels_train)
     best_forest = grid_search.best_estimator_
 
