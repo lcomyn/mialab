@@ -14,6 +14,8 @@ import sklearn.ensemble as sk_ensemble
 import numpy as np
 import pymia.data.conversion as conversion
 import pymia.evaluation.writer as writer
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import make_scorer
 
 try:
     import mialab.data.structure as structure
@@ -73,29 +75,24 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     labels_train = np.concatenate([img.feature_matrix[1] for img in images]).squeeze()
     
     warnings.warn('Random forest parameters not properly set.')
-    #initialise search grid
-    from sklearn.model_selection import GridSearchCV
-    
-    # Define the parameter grid for RandomForestClassifier
+
+    # Define parameter grid
     param_grid = {'n_estimators': [10, 30, 50],
                   'max_depth': [20, 40, 60]}
-
-    # Initialize the RandomForestClassifier
     forest = sk_ensemble.RandomForestClassifier()
+    # Initialize evaluator
+    evaluator = putil.init_evaluator()
+
+    # Create custom scorer for GridSearchCV
+    scorer = make_scorer(putil.custom_segmentation_score, evaluator=evaluator)
 
     # Initialize grid search with the custom Dice score evaluator function
-    grid_search = GridSearchCV(forest, param_grid, scoring=evaluator_score, cv=3, verbose=2)
-
-    # Fit the model using grid search
-    grid_search.fit(data_train, labels_train)  # Assuming data_train and labels_train are defined
-
-    # Retrieve the best estimator (the model with the best hyperparameters based on Dice score)
+    grid_search = GridSearchCV(forest, param_grid, scoring=scorer, cv=3, verbose=2)
+    grid_search.fit(data_train, labels_train)
     best_forest = grid_search.best_estimator_
 
-
-
     start_time = timeit.default_timer()
-    forest.fit(data_train, labels_train)
+    forest = best_forest
     print(' Time elapsed:', timeit.default_timer() - start_time, 's')
 
     # create a result directory with timestamp

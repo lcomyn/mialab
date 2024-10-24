@@ -34,7 +34,7 @@ class ImageNormalization(pymia_fltr.Filter):
         img_arr = (img_arr - np.mean(img_arr))/np.std(img_arr) 
         img_out = sitk.GetImageFromArray(img_arr)
         img_out.CopyInformation(image)
-        print('Normalisation Complete')
+        print('Normalisation Complete\n')
         return img_out
 
     def __str__(self):
