@@ -34,7 +34,7 @@ class ImageNormalization(pymia_fltr.Filter):
         img_arr = (img_arr - np.mean(img_arr))/np.std(img_arr) 
         img_out = sitk.GetImageFromArray(img_arr)
         img_out.CopyInformation(image)
-
+        print('Normalisation Complete')
         return img_out
 
     def __str__(self):
@@ -82,6 +82,7 @@ class SkullStripping(pymia_fltr.Filter):
         # # todo: remove the skull from the image by using the brain mask
         # warnings.warn('No skull-stripping implemented. Returning unprocessed image.')
         image = image*mask
+        print('Skull Stripping Complete')
         return image
 
     def __str__(self):
@@ -145,6 +146,7 @@ class ImageRegistration(pymia_fltr.Filter):
             interpolator = sitk.sitkLinear
         image = sitk.Resample(image, referenceImage = params.atlas, transform = params.transformation, interpolator = interpolator)
         # print(f"Registered Image dimensions: {image.GetSize()}")
+        print('Registration Complete')
         return image
 
     def __str__(self):
