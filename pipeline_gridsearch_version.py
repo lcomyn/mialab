@@ -13,6 +13,7 @@ import SimpleITK as sitk
 import sklearn.ensemble as sk_ensemble
 import numpy as np
 import pymia.data.conversion as conversion
+import pymia.evaluation.metric as metric
 import pymia.evaluation.writer as writer
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import make_scorer, accuracy_score
@@ -80,11 +81,9 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     param_grid = {'n_estimators': [10, 30, 50],
                   'max_depth': [20, 40, 60]}
     forest = sk_ensemble.RandomForestClassifier()
-    # Initialize evaluator
-    evaluator = putil.init_evaluator()
-
+    
     # Create custom scorer for GridSearchCV
-    scorer = make_scorer(putil.custom_segmentation_score)
+    scorer = make_scorer(putil.multiclass_dice_coefficient)
 
     # Initialize grid search with the custom Dice score evaluator function
     grid_search = GridSearchCV(forest, param_grid, scoring=scorer, verbose=2)

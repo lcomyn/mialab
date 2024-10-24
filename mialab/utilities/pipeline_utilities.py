@@ -310,35 +310,37 @@ def init_evaluator() -> eval_.Evaluator:
     evaluator = eval_.SegmentationEvaluator(metrics, labels)
     return evaluator
 
-def custom_segmentation_score(y, y_pred):
+def multiclass_dice_coefficient(y_true, y_pred, labels = [0,1,2,3,4,5]):
     """
-    Custom scoring function for segmentation evaluation with RandomForest.
+    Compute the Dice coefficient for multi-class predictions.
     
-    Args:
-        estimator: The trained RandomForest model (from GridSearchCV).
-        X: The feature data (image feature matrices).
-        y: The true segmentation labels.
-        evaluator: SegmentationEvaluator instance with metrics defined.
+    Parameters:
+    - y_true: Ground truth labels
+    - y_pred: Predicted labels
+    - labels: List of unique classes (for multi-class classification)
 
     Returns:
-        float: The average score across all metrics (e.g., Dice coefficient).
+    - Average Dice coefficient across all classes
     """
-
-    # Convert predictions back to SimpleITK image for evaluation
-    prediction_image = conversion.NumpySimpleITKImageBridge.convert(y_pred.astype(np.uint8), img.image_properties)
-        
-    # Get the ground truth for evaluation
-    ground_truth = conversion.NumpySimpleITKImageBridge.convert(y, img.image_properties)
-        
-    # Evaluate and collect the score (e.g., Dice coefficient)
-    evaluator.evaluate(prediction_image, ground_truth, img.id_)
-        
-    # Assuming we focus on Dice coefficient
-    dice_score = evaluator.results[i].value
+    dice_scores = []
     
+    for label in labels:
+        # Create binary masks for the current class (one-vs-rest)
+        true_mask = (y_true == label).astype(int)
+        pred_mask = (y_pred == label).astype(int)
+
+        # Compute intersection and union
+        intersection = np.sum(true_mask * pred_mask)
+        dice = 2 * intersection / (np.sum(true_mask) + np.sum(pred_mask))
         
-    # Return the average score across all samples
-    return dice_score
+        # Handle cases where there is no prediction/true label for this class
+        if np.sum(true_mask) + np.sum(pred_mask) == 0:
+            dice = 1.0  # Perfect match if both are empty
+        
+        dice_scores.append(dice)
+    print('dice_scores', dice_scores)
+    # Return the average Dice coefficient
+    return np.mean(dice_scores)
 
 
 def pre_process_batch(data_batch: t.Dict[structure.BrainImageTypes, structure.BrainImage],
