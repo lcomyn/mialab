@@ -180,7 +180,7 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
     Returns:
         (structure.BrainImage):
     """
-
+    print('\n')
     print('-' * 10, 'Processing', id_)
     
     # load image
@@ -199,9 +199,10 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
                                       len(pipeline_brain_mask.filters) - 1)
     
     # execute pipeline on the brain mask image
+    print('... execute pre-processing BrainMask ...')
     img.images[structure.BrainImageTypes.BrainMask] = pipeline_brain_mask.execute(
         img.images[structure.BrainImageTypes.BrainMask])
-    
+    print('\n')
     # construct pipeline for T1w image pre-processing
     pipeline_t1 = fltr.FilterPipeline()
     if kwargs.get('registration_pre', False):
@@ -214,7 +215,7 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
                               len(pipeline_t1.filters) - 1)
     if kwargs.get('normalization_pre', False):
         pipeline_t1.add_filter(fltr_prep.ImageNormalization())
-
+    print('... execute pre-processing on T1W ...')
     # execute pipeline on the T1w image
     img.images[structure.BrainImageTypes.T1w] = pipeline_t1.execute(img.images[structure.BrainImageTypes.T1w])
 
@@ -230,7 +231,7 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
                               len(pipeline_t2.filters) - 1)
     if kwargs.get('normalization_pre', False):
         pipeline_t2.add_filter(fltr_prep.ImageNormalization())
-
+    print('... execute pre-processing on T2W ...')
     # execute pipeline on the T2w image
     img.images[structure.BrainImageTypes.T2w] = pipeline_t2.execute(img.images[structure.BrainImageTypes.T2w])
     
@@ -240,7 +241,7 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
         pipeline_gt.add_filter(fltr_prep.ImageRegistration())
         pipeline_gt.set_param(fltr_prep.ImageRegistrationParameters(atlas_t1, img.transformation, True),
                               len(pipeline_gt.filters) - 1)
-
+    print('... execute pre-processing on GT ...')
     # execute pipeline on the ground truth image
     img.images[structure.BrainImageTypes.GroundTruth] = pipeline_gt.execute(
         img.images[structure.BrainImageTypes.GroundTruth])
@@ -309,6 +310,38 @@ def init_evaluator() -> eval_.Evaluator:
     evaluator = eval_.SegmentationEvaluator(metrics, labels)
 
     return evaluator
+
+def multiclass_dice_coefficient(y_true, y_pred, labels = [0,1,2,3,4,5]):
+    """
+    Compute the Dice coefficient for multi-class predictions.
+    
+    Parameters:
+    - y_true: Ground truth labels
+    - y_pred: Predicted labels
+    - labels: List of unique classes (for multi-class classification)
+
+    Returns:
+    - Average Dice coefficient across all classes
+    """
+    dice_scores = []
+    
+    for label in labels:
+        # Create binary masks for the current class (one-vs-rest)
+        true_mask = (y_true == label).astype(int)
+        pred_mask = (y_pred == label).astype(int)
+
+        # Compute intersection and union
+        intersection = np.sum(true_mask * pred_mask)
+        dice = 2 * intersection / (np.sum(true_mask) + np.sum(pred_mask))
+        
+        # Handle cases where there is no prediction/true label for this class
+        if np.sum(true_mask) + np.sum(pred_mask) == 0:
+            dice = 1.0  # Perfect match if both are empty
+        
+        dice_scores.append(dice)
+    print('dice_scores', dice_scores)
+    # Return the average Dice coefficient
+    return np.mean(dice_scores)
 
 
 def pre_process_batch(data_batch: t.Dict[structure.BrainImageTypes, structure.BrainImage],
