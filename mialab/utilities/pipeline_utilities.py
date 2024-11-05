@@ -372,7 +372,47 @@ def pre_process_batch(data_batch: t.Dict[structure.BrainImageTypes, structure.Br
         images = [pre_process(id_, path, **pre_process_params) for id_, path in params_list]
     return images
 
+# changes made to process in smaller chunks
+def post_process_batch(brain_images: t.List[structure.BrainImage], segmentations: t.List[sitk.Image],
+                       probabilities: t.List[sitk.Image], post_process_params: dict = None,
+                       multi_process: bool = True, batch_size: int = 5) -> t.List[sitk.Image]:
+    """ Post-processes a batch of images in smaller chunks.
 
+    Args:
+        brain_images (List[structure.BrainImageTypes]): Original images that were used for the prediction.
+        segmentations (List[sitk.Image]): The predicted segmentation.
+        probabilities (List[sitk.Image]): The prediction probabilities.
+        post_process_params (dict): Post-processing parameters.
+        multi_process (bool): Whether to use the parallel processing on multiple cores or to run sequentially.
+        batch_size (int): The size of each batch to process.
+
+    Returns:
+        List[sitk.Image]: List of post-processed images
+    """
+    if post_process_params is None:
+        post_process_params = {}
+
+    pp_images = []  # Initialize a list to store the post-processed images
+
+    # Process images in batches
+    for i in range(0, len(brain_images), batch_size):
+        batch_brain_images = brain_images[i:i + batch_size]
+        batch_segmentations = segmentations[i:i + batch_size]
+        batch_probabilities = probabilities[i:i + batch_size]
+
+        param_list = zip(batch_brain_images, batch_segmentations, batch_probabilities)
+
+        if multi_process:
+            pp_images.extend(mproc.MultiProcessor.run(post_process, param_list, post_process_params,
+                                                       mproc.PostProcessingPickleHelper))
+        else:
+            pp_images.extend([post_process(img, seg, prob, **post_process_params) for img, seg, prob in param_list])
+
+    return pp_images
+
+
+# original function
+'''
 def post_process_batch(brain_images: t.List[structure.BrainImage], segmentations: t.List[sitk.Image],
                        probabilities: t.List[sitk.Image], post_process_params: dict = None,
                        multi_process: bool = True) -> t.List[sitk.Image]:
@@ -398,3 +438,4 @@ def post_process_batch(brain_images: t.List[structure.BrainImage], segmentations
     else:
         pp_images = [post_process(img, seg, prob, **post_process_params) for img, seg, prob in param_list]
     return pp_images
+'''
