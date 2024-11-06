@@ -107,11 +107,15 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     for img in images_test:
         print('-' * 10, 'Testing', img.id_)
 
+        
         start_time = timeit.default_timer()
         predictions = forest.predict(img.feature_matrix[0])
+        print(np.shape(predictions))
         probabilities = forest.predict_proba(img.feature_matrix[0])
+        labels = img.feature_matrix[1].squeeze()
+        print(np.shape(labels))
         print(' Time elapsed:', timeit.default_timer() - start_time, 's')
-
+        
         # convert prediction and probabilities back to SimpleITK images
         image_prediction = conversion.NumpySimpleITKImageBridge.convert(predictions.astype(np.uint8),
                                                                         img.image_properties)
@@ -119,7 +123,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
 
         # evaluate segmentation without post-processing
         evaluator.evaluate(image_prediction, img.images[structure.BrainImageTypes.GroundTruth], img.id_)
-
+        own_dices = putil.multiclass_dice_coefficient(predictions, labels)
         images_prediction.append(image_prediction)
         images_probabilities.append(image_probabilities)
 

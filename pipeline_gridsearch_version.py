@@ -78,8 +78,8 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     warnings.warn('Random forest parameters not properly set.')
 
     # Define parameter grid
-    param_grid = {'n_estimators': [10, 30, 50],
-                  'max_depth': [20, 40, 60]}
+    param_grid = {'n_estimators': [40, 50, 60, 70],
+                  'max_depth': [30,40,50,60,70]}
     forest = sk_ensemble.RandomForestClassifier()
     
     # Create custom scorer for GridSearchCV
@@ -89,7 +89,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     grid_search = GridSearchCV(forest, param_grid, scoring=scorer, verbose=2)
     grid_search.fit(data_train, labels_train)
     best_forest = grid_search.best_estimator_
-
+    print('parameters', grid_search.best_params_)
     start_time = timeit.default_timer()
     forest = best_forest
     print(' Time elapsed:', timeit.default_timer() - start_time, 's')
@@ -122,7 +122,10 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
 
         start_time = timeit.default_timer()
         predictions = forest.predict(img.feature_matrix[0])
+        print(np.shape(predictions))
         probabilities = forest.predict_proba(img.feature_matrix[0])
+        labels = img.feature_matrix[1]
+        print(np.shape(labels))
         print(' Time elapsed:', timeit.default_timer() - start_time, 's')
 
         # convert prediction and probabilities back to SimpleITK images
@@ -132,7 +135,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
 
         # evaluate segmentation without post-processing
         evaluator.evaluate(image_prediction, img.images[structure.BrainImageTypes.GroundTruth], img.id_)
-
+        # own_dices = putil.multiclass_dice_coefficient(predictions, labels)
         images_prediction.append(image_prediction)
         images_probabilities.append(image_probabilities)
 
@@ -144,13 +147,12 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     for i, img in enumerate(images_test):
         evaluator.evaluate(images_post_processed[i], img.images[structure.BrainImageTypes.GroundTruth],
                            img.id_ + '-PP')
-        own_dices = putil.multiclass_dice_coefficient(images_post_processed[i], img.images[structure.BrainImageTypes.GroundTruth])
-        sitk.WriteImage(img.images[structure.BrainImageTypes.T1w], os.path.join(result_dir, images_test[i].id_ + '_T1W.mha'))
-        sitk.WriteImage(img.images[structure.BrainImageTypes.T2w], os.path.join(result_dir, images_test[i].id_ + '_T2W.mha'))
-        sitk.WriteImage(img.images[structure.BrainImageTypes.GroundTruth], os.path.join(result_dir, images_test[i].id_ + '_GT.mha'))
         # save results
         sitk.WriteImage(images_prediction[i], os.path.join(result_dir, images_test[i].id_ + '_SEG.mha'), True)
         sitk.WriteImage(images_post_processed[i], os.path.join(result_dir, images_test[i].id_ + '_SEG-PP.mha'), True)
+        sitk.WriteImage(img.images[structure.BrainImageTypes.T1w], os.path.join(result_dir, images_test[i].id_ + '_T1W.mha'))
+        sitk.WriteImage(img.images[structure.BrainImageTypes.T2w], os.path.join(result_dir, images_test[i].id_ + '_T2W.mha'))
+        sitk.WriteImage(img.images[structure.BrainImageTypes.GroundTruth], os.path.join(result_dir, images_test[i].id_ + '_GT.mha'))
 
     # use two writers to report the results
     os.makedirs(result_dir, exist_ok=True)  # generate result directory, if it does not exists

@@ -338,7 +338,7 @@ def multiclass_dice_coefficient(y_true, y_pred, labels = [0,1,2,3,4,5]):
             dice = 1.0  # Perfect match if both are empty
         
         dice_scores.append(dice)
-    print('dice_scores', dice_scores)
+    
     # Return the average Dice coefficient
     return np.mean(dice_scores)
 
