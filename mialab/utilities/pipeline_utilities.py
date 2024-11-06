@@ -308,6 +308,7 @@ def init_evaluator() -> eval_.Evaluator:
               }
 
     evaluator = eval_.SegmentationEvaluator(metrics, labels)
+
     return evaluator
 
 def multiclass_dice_coefficient(y_true, y_pred, labels = [0,1,2,3,4,5]):
