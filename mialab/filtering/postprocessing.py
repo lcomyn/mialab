@@ -57,7 +57,11 @@ class ImagePostProcessing(pymia_fltr.Filter):
             label_mask = sitk.BinaryThreshold(image, lowerThreshold=float(label), upperThreshold=float(label), insideValue=1, outsideValue=0)
             
             # Apply the largest components filter to the binary mask
-            processed_mask = self.largest_components_filter.execute(label_mask)
+            if label == 0: # label that represents the white matter
+                largest_components_filter_label2 = pymia_postproc.LargestNConnectedComponents(2, False)
+                processed_mask = largest_components_filter_label2.execute(label_mask)
+            else:
+                processed_mask = self.largest_components_filter.execute(label_mask)
 
             # Cast processed_mask to 8-bit and multiply by label
             processed_mask = sitk.Cast(sitk.Multiply(processed_mask, float(label)), sitk.sitkUInt8)
@@ -67,9 +71,27 @@ class ImagePostProcessing(pymia_fltr.Filter):
 
             # Trigger garbage collection after each label processing to manage memory
             gc.collect()
+        
+        erode_filter = sitk.BinaryErodeImageFilter() 
+        erode_filter.SetForegroundValue(1) 
+        erode_filter.SetKernelType(sitk.sitkBall) 
+        eroded_image = erode_filter.Execute(processed_image)
+        # eroded_image_array = sitk.GetArrayFromImage(eroded_image)
+
+        # fillhole_filter = sitk.BinaryFillholeImageFilter() 
+        # fillhole_filter.SetFullyConnected(True) 
+        # fillhole_filter.SetForegroundValue(1) 
+        # filled_image = fillhole_filter.Execute(eroded_image) 
+        # # filled_image_array = sitk.GetArrayFromImage(filled_image)
+
+        dilate_filter = sitk.BinaryDilateImageFilter() 
+        dilate_filter.SetForegroundValue(1) 
+        dilate_filter.SetKernelType(sitk.sitkBall)
+        dilated_image = dilate_filter.Execute(eroded_image) 
+        # combined_pipeline = sitk.GetArrayFromImage(dilated_image)
 
         print("Post-processing completed.")  # Indicate that post-processing is done
-        return processed_image
+        return dilated_image
 
     def __str__(self):
         """Gets a printable string representation.

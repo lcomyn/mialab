@@ -375,7 +375,7 @@ def pre_process_batch(data_batch: t.Dict[structure.BrainImageTypes, structure.Br
 # changes made to process in smaller chunks
 def post_process_batch(brain_images: t.List[structure.BrainImage], segmentations: t.List[sitk.Image],
                        probabilities: t.List[sitk.Image], post_process_params: dict = None,
-                       multi_process: bool = True, batch_size: int = 5) -> t.List[sitk.Image]:
+                       multi_process: bool = True, batch_size: int = 4) -> t.List[sitk.Image]:
     """ Post-processes a batch of images in smaller chunks.
 
     Args:
