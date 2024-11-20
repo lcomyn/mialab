@@ -295,7 +295,24 @@ def init_evaluator() -> eval_.Evaluator:
     """
 
     # initialize metrics
-    metrics = [metric.DiceCoefficient()]
+    metrics = [metric.DiceCoefficient(), 
+                metric.Sensitivity(),
+                metric.Specificity(),
+                metric.Precision(),
+                metric.MutualInformation(), 
+                metric.HausdorffDistance(), 
+                metric.HausdorffDistance(percentile = 95),
+                metric.TrueNegative,
+                metric.FalseNegative(),
+                metric.FalsePositive(),
+                metric.TruePositive(),
+                metric.JaccardCoefficient(),
+                metric.VolumeSimilarity(),
+                metric.AverageDistance(),
+                metric.RandIndex(),
+                metric.AreaUnderCurve(),
+                metric.AdjustedRandIndex(),
+                ]
     # todo: add hausdorff distance, 95th percentile (see metric.HausdorffDistance)
     warnings.warn('Initialized evaluation with the Dice coefficient. Do you know other suitable metrics?')
 
