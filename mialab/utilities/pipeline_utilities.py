@@ -302,7 +302,7 @@ def init_evaluator() -> eval_.Evaluator:
                 metric.MutualInformation(), 
                 metric.HausdorffDistance(), 
                 metric.HausdorffDistance(percentile = 95),
-                metric.TrueNegative,
+                metric.TrueNegative(),
                 metric.FalseNegative(),
                 metric.FalsePositive(),
                 metric.TruePositive(),
