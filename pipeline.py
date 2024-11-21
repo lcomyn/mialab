@@ -59,6 +59,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                                           LOADING_KEYS,
                                           futil.BrainImageFilePathGenerator(),
                                           futil.DataDirectoryFilter())
+    
     pre_process_params = {'skullstrip_pre': True,
                           'normalization_pre': True,
                           'registration_pre': True,
@@ -79,7 +80,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     warnings.warn('Random forest parameters not properly set.')
     forest = sk_ensemble.RandomForestClassifier(max_features=images[0].feature_matrix[0].shape[1],
                                                 n_estimators=60,
-                                                max_depth=40)
+                                                max_depth=50)
 
     start_time = timeit.default_timer()
     forest.fit(data_train, labels_train)
@@ -216,12 +217,20 @@ if __name__ == "__main__":
         help='Directory with testing data.'
     )
 
-    # EXTRA PARSER
+    # EXTRA PARSERS
     parser.add_argument(
     '--no_post_process',
     action='store_true',
     help='Run the pipeline without post-processing of the segmentation.'
     )
 
+    parser.add_argument(
+        '--label_set',
+        type=str,
+        choices=['all_labels', 'small_labels', 'large_labels'],
+        default='all_labels',
+        help='Specify which label set to use: all_labels (0-5), small_labels (0, 3, 4, 5), or large_labels (0, 1, 2).'
+    )
+
     args = parser.parse_args()
-    main(args.result_dir, args.data_atlas_dir, args.data_train_dir, args.data_test_dir, args.no_post_process)
+    main(args.result_dir, args.data_atlas_dir, args.data_train_dir, args.data_test_dir, args.no_post_process, args.label_set)

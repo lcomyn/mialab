@@ -56,6 +56,7 @@ class FeatureExtractor:
             img (structure.BrainImage): The image to extract features from.
         """
         self.img = img
+        self.label_set = kwargs.get('label_set', 'all_labels')
         self.training = kwargs.get('training', True)
         self.coordinates_feature = kwargs.get('coordinates_feature', False)
         self.intensity_feature = kwargs.get('intensity_feature', False)
@@ -88,12 +89,14 @@ class FeatureExtractor:
             self.img.feature_images[FeatureImageTypes.T1w_GRADIENT_INTENSITY] = \
                 sitk.GradientMagnitude(self.img.images[structure.BrainImageTypes.T2w])
 
-        self._generate_feature_matrix()
+        # self._generate_feature_matrix()
+        self._generate_feature_matrix(label_set=self.label_set)
+
 
         return self.img
 
-    def _generate_feature_matrix(self):
-        """Generates a feature matrix."""
+    def _generate_feature_matrix(self, label_set='all_labels'):
+        """Generates a feature matrix based on the specified label set."""
 
         mask = None
         if self.training:
@@ -111,10 +114,28 @@ class FeatureExtractor:
             # mask_background = self.img.images[structure.BrainImageTypes.BrainMask]
             # and use background_mask=mask_background in get_mask()
 
+            # NEW
+            # Define label groups and probabilities
+            label_groups = {
+                'all_labels': ([0, 1, 2, 3, 4, 5], [0.0003, 0.004, 0.003, 0.04, 0.04, 0.02]),
+                'small_labels': ([0, 3, 4, 5], [0.0003, 0.04, 0.04, 0.02]),
+                'large_labels': ([0, 1, 2], [0.0003, 0.004, 0.003])
+            }
+
+            print(f'Choose labelset of {label_set}.') # check
+            labels_to_include, probabilities = label_groups[label_set]
+
+            # Generate the mask based on the selected labels
             mask = fltr_feat.RandomizedTrainingMaskGenerator.get_mask(
                 self.img.images[structure.BrainImageTypes.GroundTruth],
-                [0, 1, 2, 3, 4, 5],
-                [0.0003, 0.004, 0.003, 0.04, 0.04, 0.02])
+                labels_to_include,
+                probabilities
+            )
+
+            # mask = fltr_feat.RandomizedTrainingMaskGenerator.get_mask(
+            #     self.img.images[structure.BrainImageTypes.GroundTruth],
+            #     [0, 1, 2, 3, 4, 5],
+            #     [0.0003, 0.004, 0.003, 0.04, 0.04, 0.02])
 
             # convert the mask to a logical array where value 1 is False and value 0 is True
             mask = sitk.GetArrayFromImage(mask)
@@ -128,6 +149,13 @@ class FeatureExtractor:
         # generate labels (note that we assume to have a ground truth even for testing)
         labels = self._image_as_numpy_array(self.img.images[structure.BrainImageTypes.GroundTruth], mask)
 
+        # NEW
+        # Reassign excluded labels to background (0)
+        if label_set == 'small_labels':
+            labels[np.isin(labels, [1, 2])] = 0
+        elif label_set == 'large_labels':
+            labels[np.isin(labels, [3, 4, 5])] = 0
+        
         self.img.feature_matrix = (data.astype(np.float32), labels.astype(np.int16))
 
     @staticmethod
@@ -287,7 +315,7 @@ def post_process(img: structure.BrainImage, segmentation: sitk.Image, probabilit
     return pipeline.execute(segmentation)
 
 
-def init_evaluator() -> eval_.Evaluator:
+def init_evaluator(label_set='all_labels') -> eval_.Evaluator:
     """Initializes an evaluator.
 
     Returns:
@@ -299,14 +327,28 @@ def init_evaluator() -> eval_.Evaluator:
     # todo: add hausdorff distance, 95th percentile (see metric.HausdorffDistance)
     warnings.warn('Initialized evaluation with the Dice coefficient. Do you know other suitable metrics?')
 
-    # define the labels to evaluate
-    labels = {1: 'WhiteMatter',
-              2: 'GreyMatter',
-              3: 'Hippocampus',
-              4: 'Amygdala',
-              5: 'Thalamus'
-              }
+    if label_set == 'all_labels':
+        # define the labels to evaluate
+        labels = {1: 'WhiteMatter',
+                2: 'GreyMatter',
+                3: 'Hippocampus',
+                4: 'Amygdala',
+                5: 'Thalamus'
+                }
+    
+    if label_set == 'small_labels':
+        # define the labels to evaluate
+        labels = {3: 'Hippocampus',
+                4: 'Amygdala',
+                5: 'Thalamus'
+                }
 
+    if label_set == 'large_labels':
+        # define the labels to evaluate
+        labels = {1: 'WhiteMatter',
+                2: 'GreyMatter'
+                }
+    
     evaluator = eval_.SegmentationEvaluator(metrics, labels)
 
     return evaluator
@@ -323,6 +365,7 @@ def multiclass_dice_coefficient(y_true, y_pred, labels = [0,1,2,3,4,5]):
     Returns:
     - Average Dice coefficient across all classes
     """
+    
     dice_scores = []
     
     for label in labels:
