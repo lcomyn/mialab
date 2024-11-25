@@ -4,22 +4,31 @@ Image post-processing aims to alter images such that they depict a desired repre
 """
 import warnings
 
-# import numpy as np
+import numpy as np
 # import pydensecrf.densecrf as crf
 # import pydensecrf.utils as crf_util
 import pymia.filtering.filter as pymia_fltr
+import pymia.filtering.postprocessing as pymia_postproc
 import SimpleITK as sitk
+import gc
 
 
 class ImagePostProcessing(pymia_fltr.Filter):
     """Represents a post-processing filter."""
 
-    def __init__(self):
-        """Initializes a new instance of the ImagePostProcessing class."""
+    def __init__(self, number_of_components: int = 1, consecutive_component_labels: bool = False):
+        """Initializes a new instance of the ImagePostProcessing class.
+
+        Args:
+            number_of_components (int): The number of largest components to extract.
+            consecutive_component_labels (bool): Whether to use consecutive component labels.
+        """
         super().__init__()
 
+        self.largest_components_filter = pymia_postproc.LargestNConnectedComponents(number_of_components, consecutive_component_labels)
+
     def execute(self, image: sitk.Image, params: pymia_fltr.FilterParams = None) -> sitk.Image:
-        """Registers an image.
+        """Processes a single image.
 
         Args:
             image (sitk.Image): The image.
@@ -28,11 +37,61 @@ class ImagePostProcessing(pymia_fltr.Filter):
         Returns:
             sitk.Image: The post-processed image.
         """
-
         # todo: replace this filter by a post-processing - or do we need post-processing at all?
-        warnings.warn('No post-processing implemented. Can you think about something?')
+        # warnings.warn('No post-processing implemented. Can you think about something?')
 
-        return image
+        print("Starting post-processing...")  # Indicate that post-processing is starting
+
+        # Convert the SimpleITK image to a NumPy array for easier label extraction
+        image_array = sitk.GetArrayFromImage(image)
+        unique_labels = np.unique(image_array)
+        unique_labels = unique_labels[unique_labels != 0]  # Exclude the background (label 0)
+
+        # Initialize an empty image to accumulate processed results
+        processed_image = sitk.Image(image.GetSize(), sitk.sitkUInt8)
+        processed_image.CopyInformation(image)
+
+        # Process each label individually
+        for label in unique_labels:
+            # Create a binary mask for the current label
+            label_mask = sitk.BinaryThreshold(image, lowerThreshold=float(label), upperThreshold=float(label), insideValue=1, outsideValue=0)
+            
+            # Apply the largest components filter to the binary mask
+            if label == 0: # label that represents the white matter
+                largest_components_filter_label2 = pymia_postproc.LargestNConnectedComponents(2, False)
+                processed_mask = largest_components_filter_label2.execute(label_mask)
+            else:
+                processed_mask = self.largest_components_filter.execute(label_mask)
+
+            # Cast processed_mask to 8-bit and multiply by label
+            processed_mask = sitk.Cast(sitk.Multiply(processed_mask, float(label)), sitk.sitkUInt8)
+            
+            # Add the processed mask to the final processed image
+            processed_image = sitk.Add(processed_image, processed_mask)
+
+            # Trigger garbage collection after each label processing to manage memory
+            gc.collect()
+        
+        erode_filter = sitk.BinaryErodeImageFilter() 
+        erode_filter.SetForegroundValue(1) 
+        erode_filter.SetKernelType(sitk.sitkBall) 
+        eroded_image = erode_filter.Execute(processed_image)
+        # eroded_image_array = sitk.GetArrayFromImage(eroded_image)
+
+        # fillhole_filter = sitk.BinaryFillholeImageFilter() 
+        # fillhole_filter.SetFullyConnected(True) 
+        # fillhole_filter.SetForegroundValue(1) 
+        # filled_image = fillhole_filter.Execute(eroded_image) 
+        # # filled_image_array = sitk.GetArrayFromImage(filled_image)
+
+        dilate_filter = sitk.BinaryDilateImageFilter() 
+        dilate_filter.SetForegroundValue(1) 
+        dilate_filter.SetKernelType(sitk.sitkBall)
+        dilated_image = dilate_filter.Execute(eroded_image) 
+        # combined_pipeline = sitk.GetArrayFromImage(dilated_image)
+
+        print("Post-processing completed.")  # Indicate that post-processing is done
+        return dilated_image
 
     def __str__(self):
         """Gets a printable string representation.
@@ -41,8 +100,8 @@ class ImagePostProcessing(pymia_fltr.Filter):
             str: String representation.
         """
         return 'ImagePostProcessing:\n' \
-            .format(self=self)
-
+               f'Number of components: {self.largest_components_filter.number_of_components}, ' \
+               f'Consecutive labels: {self.largest_components_filter.consecutive_component_labels}'
 
 # class DenseCRFParams(pymia_fltr.FilterParams):
 #     """Dense CRF parameters."""

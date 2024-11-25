@@ -34,7 +34,7 @@ LOADING_KEYS = [structure.BrainImageTypes.T1w,
                 structure.BrainImageTypes.RegistrationTransform]  # the list of data we will load
 
 
-def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str):
+def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str, no_post_process: bool):
     """Brain tissue segmentation using decision forests.
 
     The main routine executes the medical image analysis pipeline:
@@ -59,6 +59,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                                           LOADING_KEYS,
                                           futil.BrainImageFilePathGenerator(),
                                           futil.DataDirectoryFilter())
+    
     pre_process_params = {'skullstrip_pre': True,
                           'normalization_pre': True,
                           'registration_pre': True,
@@ -128,18 +129,40 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
         images_prediction.append(image_prediction)
         images_probabilities.append(image_probabilities)
 
-    # post-process segmentation and evaluate with post-processing
-    post_process_params = {'simple_post': True}
-    images_post_processed = putil.post_process_batch(images_test, images_prediction, images_probabilities,
-                                                     post_process_params, multi_process=True)
+    # ORIGINAL CODE
+    # # post-process segmentation and evaluate with post-processing
+    # post_process_params = {'simple_post': True}
+    # images_post_processed = putil.post_process_batch(images_test, images_prediction, images_probabilities,
+    #                                                  post_process_params, multi_process=True)
 
+    # for i, img in enumerate(images_test):
+    #     evaluator.evaluate(images_post_processed[i], img.images[structure.BrainImageTypes.GroundTruth],
+    #                        img.id_ + '-PP')
+
+    #     # save results
+    #     sitk.WriteImage(images_prediction[i], os.path.join(result_dir, images_test[i].id_ + '_SEG.mha'), True)
+    #     sitk.WriteImage(images_post_processed[i], os.path.join(result_dir, images_test[i].id_ + '_SEG-PP.mha'), True)
+    #     sitk.WriteImage(img.images[structure.BrainImageTypes.T1w], os.path.join(result_dir, images_test[i].id_ + '_T1W.mha'))
+    #     sitk.WriteImage(img.images[structure.BrainImageTypes.T2w], os.path.join(result_dir, images_test[i].id_ + '_T2W.mha'))
+    #     sitk.WriteImage(img.images[structure.BrainImageTypes.GroundTruth], os.path.join(result_dir, images_test[i].id_ + '_GT.mha'))
+    
+    # ADJUSTED TO PARSER
+    # Post-process segmentation and evaluate with post-processing, conditionally
+    if not no_post_process:
+        post_process_params = {'simple_post': True}
+        images_post_processed = putil.post_process_batch(images_test, images_prediction, images_probabilities,
+                                                         post_process_params, multi_process=True)
+
+        for i, img in enumerate(images_test):
+            evaluator.evaluate(images_post_processed[i], img.images[structure.BrainImageTypes.GroundTruth],
+                               img.id_ + '-PP')
+
+            # Save post-processed results
+            sitk.WriteImage(images_post_processed[i], os.path.join(result_dir, images_test[i].id_ + '_SEG-PP.mha'), True)
+
+    # Save the original predictions regardless of post-processing
     for i, img in enumerate(images_test):
-        evaluator.evaluate(images_post_processed[i], img.images[structure.BrainImageTypes.GroundTruth],
-                           img.id_ + '-PP')
-
-        # save results
         sitk.WriteImage(images_prediction[i], os.path.join(result_dir, images_test[i].id_ + '_SEG.mha'), True)
-        sitk.WriteImage(images_post_processed[i], os.path.join(result_dir, images_test[i].id_ + '_SEG-PP.mha'), True)
         sitk.WriteImage(img.images[structure.BrainImageTypes.T1w], os.path.join(result_dir, images_test[i].id_ + '_T1W.mha'))
         sitk.WriteImage(img.images[structure.BrainImageTypes.T2w], os.path.join(result_dir, images_test[i].id_ + '_T2W.mha'))
         sitk.WriteImage(img.images[structure.BrainImageTypes.GroundTruth], os.path.join(result_dir, images_test[i].id_ + '_GT.mha'))
@@ -198,5 +221,20 @@ if __name__ == "__main__":
         help='Directory with testing data.'
     )
 
+    # EXTRA PARSERS
+    parser.add_argument(
+    '--no_post_process',
+    action='store_true',
+    help='Run the pipeline without post-processing of the segmentation.'
+    )
+
+    parser.add_argument(
+        '--label_set',
+        type=str,
+        choices=['all_labels', 'small_labels', 'large_labels'],
+        default='all_labels',
+        help='Specify which label set to use: all_labels (0-5), small_labels (0, 3, 4, 5), or large_labels (0, 1, 2).'
+    )
+
     args = parser.parse_args()
-    main(args.result_dir, args.data_atlas_dir, args.data_train_dir, args.data_test_dir)
+    main(args.result_dir, args.data_atlas_dir, args.data_train_dir, args.data_test_dir, args.no_post_process, args.label_set)

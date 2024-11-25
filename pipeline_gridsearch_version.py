@@ -36,7 +36,7 @@ LOADING_KEYS = [structure.BrainImageTypes.T1w,
                 structure.BrainImageTypes.RegistrationTransform]  # the list of data we will load
 
 
-def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str):
+def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str, label_set: str):
     """Brain tissue segmentation using decision forests.
 
     The main routine executes the medical image analysis pipeline:
@@ -66,7 +66,8 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                           'registration_pre': True,
                           'coordinates_feature': True,
                           'intensity_feature': True,
-                          'gradient_intensity_feature': True}
+                          'gradient_intensity_feature': True,
+                          'label_set': label_set}
 
     # load images for training and pre-process
     images = putil.pre_process_batch(crawler.data, pre_process_params, multi_process=False)
@@ -78,18 +79,26 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     warnings.warn('Random forest parameters not properly set.')
 
     # Define parameter grid
-    param_grid = {'n_estimators': [40, 50, 60, 70],
-                  'max_depth': [30,40,50,60,70]}
+    param_grid = {'n_estimators': [40, 50, 60, 70, 80, 100],
+                  'max_depth': [40, 50, 60, 70, 80, 100]}
     forest = sk_ensemble.RandomForestClassifier()
     
     # Create custom scorer for GridSearchCV
-    scorer = make_scorer(putil.multiclass_dice_coefficient)
+    if label_set == 'all_labels':
+        labels = [0, 1, 2, 3, 4, 5]
+    if label_set == 'small_labels':
+        labels = [0, 3, 4, 5]
+    if label_set == 'large_labels':
+        labels = [0, 1, 2]
+
+    scorer = make_scorer(putil.multiclass_dice_coefficient, labels=labels)
 
     # Initialize grid search with the custom Dice score evaluator function
     grid_search = GridSearchCV(forest, param_grid, scoring=scorer, verbose=2)
     grid_search.fit(data_train, labels_train)
     best_forest = grid_search.best_estimator_
     print('parameters', grid_search.best_params_)
+
     start_time = timeit.default_timer()
     forest = best_forest
     print(' Time elapsed:', timeit.default_timer() - start_time, 's')
@@ -102,7 +111,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     print('-' * 5, 'Testing...')
 
     # initialize evaluator
-    evaluator = putil.init_evaluator()
+    evaluator = putil.init_evaluator(label_set=label_set)
 
     # crawl the training image directories
     crawler = futil.FileSystemDataCrawler(data_test_dir,
@@ -208,5 +217,13 @@ if __name__ == "__main__":
         help='Directory with testing data.'
     )
 
+    parser.add_argument(
+        '--label_set',
+        type=str,
+        choices=['all_labels', 'small_labels', 'large_labels'],
+        default='all_labels',
+        help='Specify which label set to use: all_labels (0-5), small_labels (0, 3, 4, 5), or large_labels (0, 1, 2).'
+    )
+
     args = parser.parse_args()
-    main(args.result_dir, args.data_atlas_dir, args.data_train_dir, args.data_test_dir)
+    main(args.result_dir, args.data_atlas_dir, args.data_train_dir, args.data_test_dir, args.label_set)

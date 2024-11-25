@@ -56,6 +56,7 @@ class FeatureExtractor:
             img (structure.BrainImage): The image to extract features from.
         """
         self.img = img
+        self.label_set = kwargs.get('label_set', 'all_labels')
         self.training = kwargs.get('training', True)
         self.coordinates_feature = kwargs.get('coordinates_feature', False)
         self.intensity_feature = kwargs.get('intensity_feature', False)
@@ -88,12 +89,14 @@ class FeatureExtractor:
             self.img.feature_images[FeatureImageTypes.T1w_GRADIENT_INTENSITY] = \
                 sitk.GradientMagnitude(self.img.images[structure.BrainImageTypes.T2w])
 
-        self._generate_feature_matrix()
+        # self._generate_feature_matrix()
+        self._generate_feature_matrix(label_set=self.label_set)
+
 
         return self.img
 
-    def _generate_feature_matrix(self):
-        """Generates a feature matrix."""
+    def _generate_feature_matrix(self, label_set='all_labels'):
+        """Generates a feature matrix based on the specified label set."""
 
         mask = None
         if self.training:
@@ -111,10 +114,28 @@ class FeatureExtractor:
             # mask_background = self.img.images[structure.BrainImageTypes.BrainMask]
             # and use background_mask=mask_background in get_mask()
 
+            # NEW
+            # Define label groups and probabilities
+            label_groups = {
+                'all_labels': ([0, 1, 2, 3, 4, 5], [0.0003, 0.004, 0.003, 0.04, 0.04, 0.02]),
+                'small_labels': ([0, 3, 4, 5], [0.0003, 0.04, 0.04, 0.02]),
+                'large_labels': ([0, 1, 2], [0.0003, 0.004, 0.003])
+            }
+
+            print(f'Choose labelset of {label_set}.') # check
+            labels_to_include, probabilities = label_groups[label_set]
+
+            # Generate the mask based on the selected labels
             mask = fltr_feat.RandomizedTrainingMaskGenerator.get_mask(
                 self.img.images[structure.BrainImageTypes.GroundTruth],
-                [0, 1, 2, 3, 4, 5],
-                [0.0003, 0.004, 0.003, 0.04, 0.04, 0.02])
+                labels_to_include,
+                probabilities
+            )
+
+            # mask = fltr_feat.RandomizedTrainingMaskGenerator.get_mask(
+            #     self.img.images[structure.BrainImageTypes.GroundTruth],
+            #     [0, 1, 2, 3, 4, 5],
+            #     [0.0003, 0.004, 0.003, 0.04, 0.04, 0.02])
 
             # convert the mask to a logical array where value 1 is False and value 0 is True
             mask = sitk.GetArrayFromImage(mask)
@@ -128,6 +149,13 @@ class FeatureExtractor:
         # generate labels (note that we assume to have a ground truth even for testing)
         labels = self._image_as_numpy_array(self.img.images[structure.BrainImageTypes.GroundTruth], mask)
 
+        # NEW
+        # Reassign excluded labels to background (0)
+        if label_set == 'small_labels':
+            labels[np.isin(labels, [1, 2])] = 0
+        elif label_set == 'large_labels':
+            labels[np.isin(labels, [3, 4, 5])] = 0
+        
         self.img.feature_matrix = (data.astype(np.float32), labels.astype(np.int16))
 
     @staticmethod
@@ -287,7 +315,7 @@ def post_process(img: structure.BrainImage, segmentation: sitk.Image, probabilit
     return pipeline.execute(segmentation)
 
 
-def init_evaluator() -> eval_.Evaluator:
+def init_evaluator(label_set='all_labels') -> eval_.Evaluator:
     """Initializes an evaluator.
 
     Returns:
@@ -316,14 +344,28 @@ def init_evaluator() -> eval_.Evaluator:
     # todo: add hausdorff distance, 95th percentile (see metric.HausdorffDistance)
     # warnings.warn('Initialized evaluation with the Dice coefficient. Do you know other suitable metrics?')
 
-    # define the labels to evaluate
-    labels = {1: 'WhiteMatter',
-              2: 'GreyMatter',
-              3: 'Hippocampus',
-              4: 'Amygdala',
-              5: 'Thalamus'
-              }
+    if label_set == 'all_labels':
+        # define the labels to evaluate
+        labels = {1: 'WhiteMatter',
+                2: 'GreyMatter',
+                3: 'Hippocampus',
+                4: 'Amygdala',
+                5: 'Thalamus'
+                }
+    
+    if label_set == 'small_labels':
+        # define the labels to evaluate
+        labels = {3: 'Hippocampus',
+                4: 'Amygdala',
+                5: 'Thalamus'
+                }
 
+    if label_set == 'large_labels':
+        # define the labels to evaluate
+        labels = {1: 'WhiteMatter',
+                2: 'GreyMatter'
+                }
+    
     evaluator = eval_.SegmentationEvaluator(metrics, labels)
 
     return evaluator
@@ -340,6 +382,7 @@ def multiclass_dice_coefficient(y_true, y_pred, labels = [0,1,2,3,4,5]):
     Returns:
     - Average Dice coefficient across all classes
     """
+    
     dice_scores = []
     
     for label in labels:
@@ -389,7 +432,47 @@ def pre_process_batch(data_batch: t.Dict[structure.BrainImageTypes, structure.Br
         images = [pre_process(id_, path, **pre_process_params) for id_, path in params_list]
     return images
 
+# changes made to process in smaller chunks
+def post_process_batch(brain_images: t.List[structure.BrainImage], segmentations: t.List[sitk.Image],
+                       probabilities: t.List[sitk.Image], post_process_params: dict = None,
+                       multi_process: bool = True, batch_size: int = 4) -> t.List[sitk.Image]:
+    """ Post-processes a batch of images in smaller chunks.
 
+    Args:
+        brain_images (List[structure.BrainImageTypes]): Original images that were used for the prediction.
+        segmentations (List[sitk.Image]): The predicted segmentation.
+        probabilities (List[sitk.Image]): The prediction probabilities.
+        post_process_params (dict): Post-processing parameters.
+        multi_process (bool): Whether to use the parallel processing on multiple cores or to run sequentially.
+        batch_size (int): The size of each batch to process.
+
+    Returns:
+        List[sitk.Image]: List of post-processed images
+    """
+    if post_process_params is None:
+        post_process_params = {}
+
+    pp_images = []  # Initialize a list to store the post-processed images
+
+    # Process images in batches
+    for i in range(0, len(brain_images), batch_size):
+        batch_brain_images = brain_images[i:i + batch_size]
+        batch_segmentations = segmentations[i:i + batch_size]
+        batch_probabilities = probabilities[i:i + batch_size]
+
+        param_list = zip(batch_brain_images, batch_segmentations, batch_probabilities)
+
+        if multi_process:
+            pp_images.extend(mproc.MultiProcessor.run(post_process, param_list, post_process_params,
+                                                       mproc.PostProcessingPickleHelper))
+        else:
+            pp_images.extend([post_process(img, seg, prob, **post_process_params) for img, seg, prob in param_list])
+
+    return pp_images
+
+
+# original function
+'''
 def post_process_batch(brain_images: t.List[structure.BrainImage], segmentations: t.List[sitk.Image],
                        probabilities: t.List[sitk.Image], post_process_params: dict = None,
                        multi_process: bool = True) -> t.List[sitk.Image]:
@@ -415,3 +498,4 @@ def post_process_batch(brain_images: t.List[structure.BrainImage], segmentations
     else:
         pp_images = [post_process(img, seg, prob, **post_process_params) for img, seg, prob in param_list]
     return pp_images
+'''
