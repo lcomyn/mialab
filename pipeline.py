@@ -34,7 +34,7 @@ LOADING_KEYS = [structure.BrainImageTypes.T1w,
                 structure.BrainImageTypes.RegistrationTransform]  # the list of data we will load
 
 
-def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str, no_post_process: bool):
+def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str, no_post_process: bool, label_set: str):
     """Brain tissue segmentation using decision forests.
 
     The main routine executes the medical image analysis pipeline:
@@ -65,7 +65,8 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                           'registration_pre': True,
                           'coordinates_feature': True,
                           'intensity_feature': True,
-                          'gradient_intensity_feature': True}
+                          'gradient_intensity_feature': True,
+                          'label_set': label_set}
 
     # load images for training and pre-process
     images = putil.pre_process_batch(crawler.data, pre_process_params, multi_process=False)
@@ -75,7 +76,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     labels_train = np.concatenate([img.feature_matrix[1] for img in images]).squeeze()
 
     # initialize evaluator
-    evaluator = putil.init_evaluator()
+    evaluator = putil.init_evaluator(label_set=label_set)
 
     warnings.warn('Random forest parameters not properly set.')
     forest = sk_ensemble.RandomForestClassifier(max_features=images[0].feature_matrix[0].shape[1],
