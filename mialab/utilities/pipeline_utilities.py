@@ -118,8 +118,8 @@ class FeatureExtractor:
             # Define label groups and probabilities
             label_groups = {
                 'all_labels': ([0, 1, 2, 3, 4, 5], [0.0003, 0.004, 0.003, 0.04, 0.04, 0.02]),
-                'small_labels': ([0, 3, 4, 5], [0.0003, 0.04, 0.04, 0.02]),
-                'large_labels': ([0, 1, 2], [0.0003, 0.004, 0.003])
+                'small_labels': ([0, 3, 4, 5, 6], [0.0003, 0.04, 0.04, 0.02, 0.0043]),
+                'large_labels': ([0, 1, 2, 6], [0.0003, 0.004, 0.003, 0.1])
             }
 
             print(f'Choose labelset of {label_set}.') # check
@@ -150,11 +150,11 @@ class FeatureExtractor:
         labels = self._image_as_numpy_array(self.img.images[structure.BrainImageTypes.GroundTruth], mask)
 
         # NEW
-        # Reassign excluded labels to background (0)
+        # Reassign excluded labels to OTHER LABEL (6)
         if label_set == 'small_labels':
-            labels[np.isin(labels, [1, 2])] = 0
+            labels[np.isin(labels, [1, 2])] = 6
         elif label_set == 'large_labels':
-            labels[np.isin(labels, [3, 4, 5])] = 0
+            labels[np.isin(labels, [3, 4, 5])] = 6
         
         self.img.feature_matrix = (data.astype(np.float32), labels.astype(np.int16))
 

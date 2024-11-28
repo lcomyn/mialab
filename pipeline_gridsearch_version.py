@@ -87,9 +87,9 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     if label_set == 'all_labels':
         labels = [0, 1, 2, 3, 4, 5]
     if label_set == 'small_labels':
-        labels = [0, 3, 4, 5]
+        labels = [0, 3, 4, 5, 6]
     if label_set == 'large_labels':
-        labels = [0, 1, 2]
+        labels = [0, 1, 2, 6]
 
     scorer = make_scorer(putil.multiclass_dice_coefficient, labels=labels)
 
