@@ -34,7 +34,7 @@ LOADING_KEYS = [structure.BrainImageTypes.T1w,
                 structure.BrainImageTypes.RegistrationTransform]  # the list of data we will load
 
 
-def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str, no_post_process: bool):
+def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str, no_post_process: bool, label_set: str):
     """Brain tissue segmentation using decision forests.
 
     The main routine executes the medical image analysis pipeline:
@@ -73,11 +73,11 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     # generate feature matrix and label vector
     data_train = np.concatenate([img.feature_matrix[0] for img in images])
     labels_train = np.concatenate([img.feature_matrix[1] for img in images]).squeeze()
-
+    
     # initialize evaluator
-    evaluator = putil.init_evaluator()
+    evaluator = putil.init_evaluator(label_set=label_set)
 
-    warnings.warn('Random forest parameters not properly set.')
+    # warnings.warn('Random forest parameters not properly set.')
     forest = sk_ensemble.RandomForestClassifier(max_features=images[0].feature_matrix[0].shape[1],
                                                 n_estimators=60,
                                                 max_depth=50)
@@ -168,8 +168,9 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
         sitk.WriteImage(img.images[structure.BrainImageTypes.GroundTruth], os.path.join(result_dir, images_test[i].id_ + '_GT.mha'))
         
     # use two writers to report the results
-    os.makedirs(result_dir, exist_ok=True)  # generate result directory, if it does not exists
-    result_file = os.path.join(result_dir, 'results.csv')
+    os.makedirs(result_dir, exist_ok=True)  # generate result directory, if it does not exist
+    label_suffix = '_small_labels' if label_set == 'small_labels' else '_large_labels' if label_set == 'large_labels' else '_all_labels'
+    result_file = os.path.join(result_dir, f'results{label_suffix}_{t}.csv')
     writer.CSVWriter(result_file).write(evaluator.results)
 
     print('\nSubject-wise results...')
