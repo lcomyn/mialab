@@ -5,3 +5,6 @@ numpy~=2.1.1
 Pillow~=10.0.1
 scikit-learn~=1.5.2
 SimpleITK~=2.1.1.2
+pandas~=2.2.3
+seaborn~=0.13.2
+jinja2~=3.1.4
