@@ -56,7 +56,7 @@ class FeatureExtractor:
             img (structure.BrainImage): The image to extract features from.
         """
         self.img = img
-        self.label_set = kwargs.get('label_set', 'all_labels')
+        # self.label_set = kwargs.get('label_set', 'all_labels')
         self.training = kwargs.get('training', True)
         self.coordinates_feature = kwargs.get('coordinates_feature', False)
         self.intensity_feature = kwargs.get('intensity_feature', False)
@@ -90,12 +90,12 @@ class FeatureExtractor:
                 sitk.GradientMagnitude(self.img.images[structure.BrainImageTypes.T2w])
 
         # self._generate_feature_matrix()
-        self._generate_feature_matrix(label_set=self.label_set)
+        self._generate_feature_matrix()
 
 
         return self.img
 
-    def _generate_feature_matrix(self, label_set='all_labels'):
+    def _generate_feature_matrix(self):
         """Generates a feature matrix based on the specified label set."""
 
         mask = None
@@ -114,16 +114,20 @@ class FeatureExtractor:
             # mask_background = self.img.images[structure.BrainImageTypes.BrainMask]
             # and use background_mask=mask_background in get_mask()
 
-            # NEW
-            # Define label groups and probabilities
+            # # NEW
+            # # Define label groups and probabilities
+            # label_groups = {
+            #     'all_labels': ([0, 1, 2, 3, 4, 5], [0.0003, 0.004, 0.003, 0.04, 0.04, 0.02]),
+            #     'small_labels': ([0, 3, 4, 5], [0.0003, 0.04, 0.04, 0.02, 0.0043]),
+            #     'large_labels': ([0, 1, 2], [0.0003, 0.004, 0.003, 0.1])
+            # }
+
             label_groups = {
-                'all_labels': ([0, 1, 2, 3, 4, 5], [0.0003, 0.004, 0.003, 0.04, 0.04, 0.02]),
-                'small_labels': ([0, 3, 4, 5, 6], [0.0003, 0.04, 0.04, 0.02, 0.0043]),
-                'large_labels': ([0, 1, 2, 6], [0.0003, 0.004, 0.003, 0.1])
+                'all_labels': ([0, 1, 2, 3, 4, 5], [0.0003, 0.004, 0.003, 0.04, 0.04, 0.02])
             }
 
-            print(f'Choose labelset of {label_set}.') # check
-            labels_to_include, probabilities = label_groups[label_set]
+            # print(f'Choose labelset of {label_set}.') # check
+            labels_to_include, probabilities = label_groups['all_labels']
 
             # Generate the mask based on the selected labels
             mask = fltr_feat.RandomizedTrainingMaskGenerator.get_mask(
@@ -149,12 +153,12 @@ class FeatureExtractor:
         # generate labels (note that we assume to have a ground truth even for testing)
         labels = self._image_as_numpy_array(self.img.images[structure.BrainImageTypes.GroundTruth], mask)
 
-        # NEW
-        # Reassign excluded labels to OTHER LABEL (6)
-        if label_set == 'small_labels':
-            labels[np.isin(labels, [1, 2])] = 6
-        elif label_set == 'large_labels':
-            labels[np.isin(labels, [3, 4, 5])] = 6
+        # # NEW
+        # # Reassign excluded labels to OTHER LABEL (6)
+        # if label_set == 'small_labels':
+        #     labels[np.isin(labels, [1, 2])] = 6
+        # elif label_set == 'large_labels':
+        #     labels[np.isin(labels, [3, 4, 5])] = 6
         
         self.img.feature_matrix = (data.astype(np.float32), labels.astype(np.int16))
 
@@ -315,7 +319,7 @@ def post_process(img: structure.BrainImage, segmentation: sitk.Image, probabilit
     return pipeline.execute(segmentation)
 
 
-def init_evaluator(label_set='all_labels') -> eval_.Evaluator:
+def init_evaluator() -> eval_.Evaluator:
     """Initializes an evaluator.
 
     Returns:
@@ -344,27 +348,34 @@ def init_evaluator(label_set='all_labels') -> eval_.Evaluator:
     # todo: add hausdorff distance, 95th percentile (see metric.HausdorffDistance)
     # warnings.warn('Initialized evaluation with the Dice coefficient. Do you know other suitable metrics?')
 
-    if label_set == 'all_labels':
-        # define the labels to evaluate
-        labels = {1: 'WhiteMatter',
-                2: 'GreyMatter',
-                3: 'Hippocampus',
-                4: 'Amygdala',
-                5: 'Thalamus'
-                }
-    
-    if label_set == 'small_labels':
-        # define the labels to evaluate
-        labels = {3: 'Hippocampus',
-                4: 'Amygdala',
-                5: 'Thalamus'
-                }
+    labels = {1: 'WhiteMatter',
+            2: 'GreyMatter',
+            3: 'Hippocampus',
+            4: 'Amygdala',
+            5: 'Thalamus'
+            }
 
-    if label_set == 'large_labels':
-        # define the labels to evaluate
-        labels = {1: 'WhiteMatter',
-                2: 'GreyMatter'
-                }
+    # if label_set == 'all_labels':
+    #     # define the labels to evaluate
+    #     labels = {1: 'WhiteMatter',
+    #             2: 'GreyMatter',
+    #             3: 'Hippocampus',
+    #             4: 'Amygdala',
+    #             5: 'Thalamus'
+    #             }
+    
+    # if label_set == 'small_labels':
+    #     # define the labels to evaluate
+    #     labels = {3: 'Hippocampus',
+    #             4: 'Amygdala',
+    #             5: 'Thalamus'
+    #             }
+
+    # if label_set == 'large_labels':
+    #     # define the labels to evaluate
+    #     labels = {1: 'WhiteMatter',
+    #             2: 'GreyMatter'
+    #             }
     
     evaluator = eval_.SegmentationEvaluator(metrics, labels)
 
@@ -390,13 +401,13 @@ def multiclass_dice_coefficient(y_true, y_pred, labels = [0,1,2,3,4,5]):
         true_mask = (y_true == label).astype(int)
         pred_mask = (y_pred == label).astype(int)
 
-        # Compute intersection and union
-        intersection = np.sum(true_mask * pred_mask)
-        dice = 2 * intersection / (np.sum(true_mask) + np.sum(pred_mask))
-        
         # Handle cases where there is no prediction/true label for this class
         if np.sum(true_mask) + np.sum(pred_mask) == 0:
             dice = 1.0  # Perfect match if both are empty
+        else:
+            # Compute intersection and union
+            intersection = np.sum(true_mask * pred_mask)
+            dice = 2 * intersection / (np.sum(true_mask) + np.sum(pred_mask))
         
         dice_scores.append(dice)
     
@@ -432,10 +443,11 @@ def pre_process_batch(data_batch: t.Dict[structure.BrainImageTypes, structure.Br
         images = [pre_process(id_, path, **pre_process_params) for id_, path in params_list]
     return images
 
+
 # changes made to process in smaller chunks
 def post_process_batch(brain_images: t.List[structure.BrainImage], segmentations: t.List[sitk.Image],
                        probabilities: t.List[sitk.Image], post_process_params: dict = None,
-                       multi_process: bool = True, batch_size: int = 4) -> t.List[sitk.Image]:
+                       multi_process: bool = True, batch_size: int = 1) -> t.List[sitk.Image]:
     """ Post-processes a batch of images in smaller chunks.
 
     Args:
