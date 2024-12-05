@@ -63,4 +63,10 @@ tryout
 - git checkout base
 - git merge Elise
 
-try-out 
+try-out
+
+# PYMIA adaptation
+- 64 instead of 8
+![alt text](image-1.png)
+- float64
+![alt text](image.png)

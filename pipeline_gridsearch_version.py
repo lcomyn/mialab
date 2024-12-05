@@ -78,9 +78,15 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     
     # # Filter training data based on label_set
     # if label_set == 'small_labels':
-    #     labels_train[np.isin(labels_train, [1, 2])] = 0  # Reassign large labels to background
+    #     # mask = np.isin(labels_train, small_labels)
+    #     # data_train = data_train[mask]
+    #     # labels_train = labels_train[mask]
+    #     labels_train[np.isin(labels_train, [1, 2])] = 6  # Reassign large labels to background
     # elif label_set == 'large_labels':
-    #     labels_train[np.isin(labels_train, [3, 4, 5])] = 0  # Reassign small labels to background
+    #     # mask = np.isin(labels_train, large_labels)
+    #     # data_train = data_train[mask]
+    #     # labels_train = labels_train[mask]
+    #     labels_train[np.isin(labels_train, [3, 4, 5])] = 6  # Reassign small labels to background
 
     warnings.warn('Random forest parameters not properly set.')
 
@@ -95,12 +101,15 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     if label_set == 'all_labels':
         labels = [0, 1, 2, 3, 4, 5]
     if label_set == 'small_labels':
-        labels = [0, 3, 4, 5]
+        labels = [3, 4, 5]
     if label_set == 'large_labels':
-        labels = [0, 1, 2]
-        
+        labels = [1, 2]
 
     scorer = make_scorer(putil.multiclass_dice_coefficient, labels=labels)
+
+    # Save txt file with info about RF and gridsearch
+    os.makedirs(result_dir, exist_ok=True)
+    result_file = os.path.join(result_dir, f"{label_set}_rf_info.txt")
 
     # Initialize grid search with the custom Dice score evaluator function
     grid_search = GridSearchCV(forest, param_grid, scoring=scorer, verbose=2)
@@ -108,19 +117,26 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     best_forest = grid_search.best_estimator_
     print('parameters', grid_search.best_params_)
 
+    # Save best parameters and param_grid to a text file
+    with open(result_file, "w") as file:
+        file.write("Best Random Forest Parameters:\n")
+        file.write(str(grid_search.best_params_))
+        file.write("\n\nParameter Grid:\n")
+        file.write(str(param_grid))
+
     start_time = timeit.default_timer()
     forest = best_forest
     print(' Time elapsed:', timeit.default_timer() - start_time, 's')
 
     # create a result directory with timestamp
     t = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    result_dir = os.path.join(result_dir, t)
+    result_dir = os.path.join(result_dir, f"{label_set}_{t}")
     os.makedirs(result_dir, exist_ok=True)
 
     print('-' * 5, 'Testing...')
 
     # initialize evaluator
-    evaluator = putil.init_evaluator(label_set=label_set)
+    evaluator = putil.init_evaluator()
 
     # crawl the training image directories
     crawler = futil.FileSystemDataCrawler(data_test_dir,
@@ -173,16 +189,15 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
         sitk.WriteImage(img.images[structure.BrainImageTypes.GroundTruth], os.path.join(result_dir, images_test[i].id_ + '_GT.mha'))
 
     # use two writers to report the results
-    os.makedirs(result_dir, exist_ok=True)  # generate result directory, if it does not exist
-    label_suffix = '_small_labels' if label_set == 'small_labels' else '_large_labels' if label_set == 'large_labels' else '_all_labels'
-    result_file = os.path.join(result_dir, f'results{label_suffix}_{t}.csv')
+    os.makedirs(result_dir, exist_ok=True)  # generate result directory, if it does not exists
+    result_file = os.path.join(result_dir, f'{label_set}_results.csv')
     writer.CSVWriter(result_file).write(evaluator.results)
 
     print('\nSubject-wise results...')
     writer.ConsoleWriter().write(evaluator.results)
 
     # report also mean and standard deviation among all subjects
-    result_summary_file = os.path.join(result_dir, 'results_summary.csv')
+    result_summary_file = os.path.join(result_dir, f'{label_set}_results_summary.csv')
     functions = {'MEAN': np.mean, 'STD': np.std}
     writer.CSVStatisticsWriter(result_summary_file, functions=functions).write(evaluator.results)
     print('\nAggregated statistic results...')
