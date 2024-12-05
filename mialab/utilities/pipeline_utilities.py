@@ -389,15 +389,14 @@ def multiclass_dice_coefficient(y_true, y_pred, labels = [0,1,2,3,4,5]):
         # Create binary masks for the current class (one-vs-rest)
         true_mask = (y_true == label).astype(int)
         pred_mask = (y_pred == label).astype(int)
-
-        # Compute intersection and union
-        intersection = np.sum(true_mask * pred_mask)
-        dice = 2 * intersection / (np.sum(true_mask) + np.sum(pred_mask))
-        
         # Handle cases where there is no prediction/true label for this class
         if np.sum(true_mask) + np.sum(pred_mask) == 0:
             dice = 1.0  # Perfect match if both are empty
-        
+        else:
+            # Compute intersection and union
+            intersection = np.sum(true_mask * pred_mask)
+            dice = 2 * intersection / (np.sum(true_mask) + np.sum(pred_mask))
+            
         dice_scores.append(dice)
     
     # Return the average Dice coefficient
