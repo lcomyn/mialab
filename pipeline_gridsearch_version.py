@@ -76,19 +76,19 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     data_train = np.concatenate([img.feature_matrix[0] for img in images])
     labels_train = np.concatenate([img.feature_matrix[1] for img in images]).squeeze()
     
-    # # Filter training data based on label_set
-    # if label_set == 'small_labels':
-    #     small_labels = [0, 3, 4, 5]
-    #     mask = np.isin(labels_train, small_labels)
-    #     data_train = data_train[mask]
-    #     labels_train = labels_train[mask]
-    #     labels_train[np.isin(labels_train, [1, 2])] = 0  # Reassign large labels to background
-    # elif label_set == 'large_labels':
-    #     large_labels = [0, 1, 2]
-    #     mask = np.isin(labels_train, large_labels)
-    #     data_train = data_train[mask]
-    #     labels_train = labels_train[mask]
-    #     labels_train[np.isin(labels_train, [3, 4, 5])] = 0  # Reassign small labels to background
+    # Filter training data based on label_set
+    if label_set == 'small_labels':
+        small_labels = [0, 3, 4, 5]
+        mask = np.isin(labels_train, small_labels)
+        data_train = data_train[mask]
+        labels_train = labels_train[mask]
+        labels_train[np.isin(labels_train, [1, 2])] = 0  # Reassign large labels to background
+    elif label_set == 'large_labels':
+        large_labels = [0, 1, 2]
+        mask = np.isin(labels_train, large_labels)
+        data_train = data_train[mask]
+        labels_train = labels_train[mask]
+        labels_train[np.isin(labels_train, [3, 4, 5])] = 0  # Reassign small labels to background
 
     warnings.warn('Random forest parameters not properly set.')
 
