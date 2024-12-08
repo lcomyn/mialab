@@ -43,9 +43,6 @@ With example questions:
 - Do the labels matter?
 - Can the labels be combined for evaluation?
 
-# Test branch
-tryout
-
 # Git commands
 - Make branch in repository online
 - Go to terminal
@@ -62,11 +59,3 @@ tryout
 - To merge your branch with base
 - git checkout base
 - git merge Elise
-
-try-out
-
-# PYMIA adaptation
-- 64 instead of 8
-![alt text](image-1.png)
-- float64
-![alt text](image.png)
