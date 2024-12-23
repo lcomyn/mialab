@@ -1,5 +1,8 @@
 # Medical Image Analysis Laboratory
 
+![image](https://github.com/user-attachments/assets/d1e6a092-ecfe-43ab-a83a-4e431f72dc6e)
+
+
 ## Overview
 
 Welcome to the medical image analysis laboratory (MIALab). This repository contains all the code you will need to get started with classical medical image analysis.
