@@ -71,9 +71,9 @@ Example questions:
 
 A small adaptation was done because of numerical overflows in ceratin of the generated metrics.
 
-- Line 113-114 in '''pymia/evaluation/evaluator.py/''' :64uint instead of 8uint
+- Line 113-114 in `pymia/evaluation/evaluator.py/´ :64uint instead of 8uint
 ![alt text](image-1.png)
-- Line 23-29 in ''' pymia/evaluator/metric''' np.float64
+- Line 23-29 in `pymia/evaluator/metric´ np.float64
 ![alt text](image.png)
 
 ## Issues and Contributions
