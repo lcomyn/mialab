@@ -83,10 +83,4 @@ A small adaptation was done because of numerical overflows in ceratin of the gen
 - Line 23-29 in `pymia/evaluator/metric`: np.float64
 ![alt text](image.png)
 
-## Issues and Contributions
-
-Found a bug or have suggestions? Open an issue or better yet, submit a pull request.
-
-Enjoy!
-
 
