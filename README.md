@@ -29,7 +29,8 @@ During the laboratory, you will get to know the entire pipeline and investigate 
 
 ## Hypothesis 3: Evaluation
 
-```Using different models tailored to small and large anatomical structures will reveal metric-specific biases, highlighting the need for size-appropriate metric selection in segmentation evaluation.
+```sh
+Using different models tailored to small and large anatomical structures will reveal metric-specific biases, highlighting the need for size-appropriate metric selection in segmentation evaluation.
 ```
 
 
