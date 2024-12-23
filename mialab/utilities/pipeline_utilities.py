@@ -374,7 +374,7 @@ def init_evaluator() -> eval_.Evaluator:
     # if label_set == 'large_labels':
     #     # define the labels to evaluate
     #     labels = {1: 'WhiteMatter',
-    #             2: 'GreyMatter'
+    #             2: 'GreyMatter' 
     #             }
     
     evaluator = eval_.SegmentationEvaluator(metrics, labels)
