@@ -1,10 +1,12 @@
 # Medical Image Analysis Laboratory
 
-Welcome to the medical image analysis laboratory (MIALab).
-This repository contains all code you will need to get started with classical medical image analysis.
+## Overview
 
-During the MIALab you will work on the task of brain tissue segmentation from magnetic resonance (MR) images.
-We have set up an entire pipeline to solve this task, specifically:
+Welcome to the medical image analysis laboratory (MIALab). This repository contains all the code you will need to get started with classical medical image analysis.
+
+## Task
+
+During the MIALab, you will work on the task of brain tissue segmentation from magnetic resonance (MR) images. We have set up an entire pipeline to solve this task, specifically:
 
 - Pre-processing
 - Registration
@@ -13,49 +15,71 @@ We have set up an entire pipeline to solve this task, specifically:
 - Post-processing
 - Evaluation
 
-After you complete the exercises, dive into the 
-    
-    pipeline.py 
+After you complete the exercises, dive into the `pipeline.py` script to learn how all of these steps work together.
 
-script to learn how all of these steps work together. 
+## Learning Objectives
 
-During the laboratory you will get to know the entire pipeline and investigate one of these pipeline elements in-depth.
-You will get to know and to use various libraries and software tools needed in the daily life as biomedical engineer or researcher in the medical image analysis domain.
+During the laboratory, you will get to know the entire pipeline and investigate one of these pipeline elements in-depth. You will get to know and use various libraries and software tools needed in the daily life of a biomedical engineer or researcher in the medical image analysis domain.
 
-Enjoy!
+## Group Members
 
-----
-
-Found a bug or do you have suggestions? Open an issue or better submit a pull request.
-
-# Group
 - Lucas Comyn
 - Elise Taragola
 - Robine Janssen
 
-# Hypothesis 3: Evaluation
+## Hypothesis 3: Evaluation
 
-> Almost perfect segmentation results can be achieved by changing th evaluation metric.
+> Almost perfect segmentation results can be achieved by changing the evaluation metric.
 
-With example questions:
+Example questions:
 - What metric hides the bad performance?
 - What metrics would be required to report the results as accurately as possible?
 - Do the labels matter?
 - Can the labels be combined for evaluation?
 
-# Git commands
-- Make branch in repository online
-- Go to terminal
+## Git Workflow
 
-- git pull
-- git branch -a 			# list of branches
-- git checkout Elise
+### Creating a Branch
 
-- Add changes to your branch
-- git add
-- git commit -m “blabla”
-- git push
+1. Make a branch in the repository online.
+2. Go to the terminal and execute the following commands:
+    ```sh
+    git pull
+    git branch -a  # list of branches
+    git checkout Elise
+    ```
 
-- To merge your branch with base
-- git checkout base
-- git merge Elise
+### Adding Changes
+
+1. Add changes to your branch.
+2. Execute the following commands:
+    ```sh
+    git add .
+    git commit -m "Your commit message"
+    git push
+    ```
+
+### Merging Branches
+
+1. To merge your branch with the base branch, execute the following commands:
+    ```sh
+    git checkout base
+    git merge Elise
+    ```
+
+## PYMIA Adaptation
+
+A small adaptation was done because of numerical overflows in ceratin of the generated metrics.
+
+- Line 113-114 in '''pymia/evaluation/evaluator.py/''' :64uint instead of 8uint
+![alt text](image-1.png)
+- Line 23-29 in ''' pymia/evaluator/metric''' np.float64
+![alt text](image.png)
+
+## Issues and Contributions
+
+Found a bug or have suggestions? Open an issue or better yet, submit a pull request.
+
+Enjoy!
+
+
